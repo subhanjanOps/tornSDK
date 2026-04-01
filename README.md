@@ -5,8 +5,14 @@
 ## Current packages
 
 - `client`: public SDK entry point, transport orchestration, retries, rate limiting, and Torn API errors
-- `user`: typed user endpoints such as `basic`, `bars`, `profile`, and `battlestats`
-- `faction`: initial faction service with `basic` endpoint support
+- `user`: typed core endpoints plus raw wrappers for the remaining user endpoints
+- `faction`: typed basic endpoints plus raw wrappers for the remaining faction endpoints
+- `forum`: raw wrappers for forum endpoints
+- `key`: raw wrappers for key endpoints
+- `market`: raw wrappers for market endpoints
+- `property`: raw wrappers for property endpoints
+- `racing`: raw wrappers for racing endpoints
+- `torn`: raw wrappers for torn endpoints
 
 ## Usage
 
@@ -45,6 +51,19 @@ func main() {
 
 	fmt.Printf("%s (%d) has %d/%d energy\n", basic.Name, profile.Level, bars.Energy.Current, bars.Energy.Maximum)
 }
+```
+
+Raw wrapper example:
+
+```go
+query := url.Values{"comment": {"my-tool"}}
+
+raw, err := sdk.Torn.GetTornLookup(ctx, query)
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Println(string(raw))
 ```
 
 ## Configuration

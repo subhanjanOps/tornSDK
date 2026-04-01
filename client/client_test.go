@@ -102,6 +102,30 @@ func TestNewInitializesServicesAndPolicies(t *testing.T) {
 		t.Fatal("expected faction service")
 	}
 
+	if c.Forum == nil {
+		t.Fatal("expected forum service")
+	}
+
+	if c.Key == nil {
+		t.Fatal("expected key service")
+	}
+
+	if c.Market == nil {
+		t.Fatal("expected market service")
+	}
+
+	if c.Property == nil {
+		t.Fatal("expected property service")
+	}
+
+	if c.Racing == nil {
+		t.Fatal("expected racing service")
+	}
+
+	if c.Torn == nil {
+		t.Fatal("expected torn service")
+	}
+
 	if c.limiter != nil {
 		t.Fatal("expected limiter to be disabled for negative RPM")
 	}

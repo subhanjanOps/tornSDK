@@ -7,7 +7,13 @@ import (
 	"time"
 
 	"github.com/subhanjanOps/tornSDK/faction"
+	forumservice "github.com/subhanjanOps/tornSDK/forum"
 	"github.com/subhanjanOps/tornSDK/internal/httpclient"
+	keyservice "github.com/subhanjanOps/tornSDK/key"
+	marketservice "github.com/subhanjanOps/tornSDK/market"
+	propertyservice "github.com/subhanjanOps/tornSDK/property"
+	racingservice "github.com/subhanjanOps/tornSDK/racing"
+	tornservice "github.com/subhanjanOps/tornSDK/torn"
 	"github.com/subhanjanOps/tornSDK/user"
 )
 
@@ -42,8 +48,14 @@ type Client struct {
 	limiter     Limiter
 	retryPolicy RetryPolicy
 
-	User    *user.Service
-	Faction *faction.Service
+	User     *user.Service
+	Faction  *faction.Service
+	Forum    *forumservice.Service
+	Key      *keyservice.Service
+	Market   *marketservice.Service
+	Property *propertyservice.Service
+	Racing   *racingservice.Service
+	Torn     *tornservice.Service
 }
 
 func New(config Config) *Client {
@@ -58,6 +70,12 @@ func New(config Config) *Client {
 
 	c.User = user.NewService(c)
 	c.Faction = faction.NewService(c)
+	c.Forum = forumservice.NewService(c)
+	c.Key = keyservice.NewService(c)
+	c.Market = marketservice.NewService(c)
+	c.Property = propertyservice.NewService(c)
+	c.Racing = racingservice.NewService(c)
+	c.Torn = tornservice.NewService(c)
 
 	return c
 }
