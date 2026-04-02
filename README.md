@@ -180,6 +180,7 @@ Raw wrappers all follow the same shape:
 - `MaxRetries`
 - `RetryWaitMin`
 - `RetryWaitMax`
+- `Logger`
 
 Default behavior:
 
@@ -194,6 +195,7 @@ Operational notes:
 - Torn recommends setting a custom `User-Agent`; you should set `Config.UserAgent` for production use.
 - Set `RequestsPerMinute` to a negative value to disable SDK throttling.
 - Set `MaxRetries` to a negative value to disable retries.
+- Set `Config.Logger` to an implementation of the `Logger` interface to receive debug, info, warn, and error messages from the SDK.
 
 ## Error Handling
 
@@ -204,6 +206,22 @@ The client distinguishes between:
 - network and timeout failures
 
 Temporary errors are retried according to the configured retry policy. Non-temporary errors are returned directly.
+
+You can check error types programmatically:
+
+```go
+import "errors"
+
+var apiErr *client.APIError
+if errors.As(err, &apiErr) {
+	fmt.Printf("Torn error code %d: %s\n", apiErr.Code, apiErr.Message)
+}
+
+var httpErr *client.HTTPError
+if errors.As(err, &httpErr) {
+	fmt.Printf("HTTP %d\n", httpErr.StatusCode)
+}
+```
 
 ## Development
 
@@ -233,6 +251,65 @@ This SDK focuses on transport and endpoint access. It does not try to provide:
 - custom business rules on top of Torn data
 
 That separation is intentional so the SDK stays predictable and easy to compose.
+
+Game-specific logic (gym recommendations, crime planning, war strategies, trading algorithms) belongs in separate projects like `advisor-engine` or `discord-bot` that consume this SDK as a data access layer.
+
+## Production Readiness
+
+| Capability | Status | Details |
+| --- | --- | --- |
+| Typed models | Done | User bars, basic, profile, battle stats; faction basic |
+| Service-based architecture | Done | One package per Torn API section |
+| Context support | Done | All methods accept `context.Context` |
+| Rate limiting | Done | Token bucket via `golang.org/x/time/rate`, configurable RPM |
+| Retry with exponential backoff | Done | Configurable max retries, backoff range, `Retry-After` header support |
+| Torn error parsing | Done | Typed `APIError` with code and message, temporary error detection |
+| Selection builder | Done | `Selections` helper in `internal/httpclient` |
+| Pagination helper | Done | `Pager` in `market` package |
+| Logging support | Done | Pluggable `Logger` interface |
+| Examples | Done | Typed, raw, and pagination examples |
+| README | Done | Full documentation |
+| Unit tests | Done | 100% coverage on core functions |
+| Version tags | Pending | Tagging `v0.1.0` next |
+
+## Roadmap
+
+**v0.1.0** — Initial public release
+- Core client with rate limiting, retries, and error parsing
+- Typed user and faction endpoints
+- Raw wrappers for the full documented `GET` surface
+- Pagination helper for market endpoints
+- Unit test coverage across all packages
+
+**v0.2.0** — Expanded typed surface
+- More typed models for frequently used endpoints
+- Additional examples and usage patterns
+- Community-reported bug fixes
+
+**v1.0.0** — Stable release
+- Stable public API with semantic versioning guarantees
+- Comprehensive typed coverage for high-traffic endpoints
+- Battle-tested in production use
+
+**Future**
+- `POST` / `PUT` / `DELETE` support when Torn API v2 expands
+- WebSocket or long-poll support if the Torn API adds real-time feeds
+
+## Contributing
+
+Contributions are welcome.
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-change`)
+3. Make your changes and add tests
+4. Run the test suite:
+   ```bash
+   go test ./...
+   go vet ./...
+   ```
+5. Commit with a clear message and open a pull request
+
+Please keep changes focused on transport, request building, response parsing, error handling, rate limiting, and retries. Game strategy and domain-specific logic belong in separate projects.
 
 ## Maintainers
 
