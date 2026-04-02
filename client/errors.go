@@ -89,23 +89,39 @@ func IsTemporary(err error) bool {
 }
 
 func parseAPIError(body []byte) *APIError {
+	// Try the canonical envelope first: {"error": {"code":..., "error": "..."}}
 	var envelope struct {
 		Error *APIError `json:"error"`
 	}
 
-	if err := json.Unmarshal(body, &envelope); err != nil {
-		return nil
+	if err := json.Unmarshal(body, &envelope); err == nil {
+		if envelope.Error != nil {
+			if envelope.Error.Code != 0 || envelope.Error.Message != "" {
+				return envelope.Error
+			}
+		}
 	}
 
-	if envelope.Error == nil {
-		return nil
+	// Sometimes the API returns a plain string: {"error":"message"}
+	var plain struct {
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal(body, &plain); err == nil && plain.Error != "" {
+		return &APIError{Message: plain.Error}
 	}
 
-	if envelope.Error.Code == 0 && envelope.Error.Message == "" {
-		return nil
+	// Or an array of errors: {"errors":[{"code":..,"error":".."}, ...]}
+	var arr struct {
+		Errors []APIError `json:"errors"`
+	}
+	if err := json.Unmarshal(body, &arr); err == nil && len(arr.Errors) > 0 {
+		first := arr.Errors[0]
+		if first.Code != 0 || first.Message != "" {
+			return &first
+		}
 	}
 
-	return envelope.Error
+	return nil
 }
 
 func shortenBody(body []byte) string {

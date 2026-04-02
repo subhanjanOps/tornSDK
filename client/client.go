@@ -36,6 +36,8 @@ type Config struct {
 	MaxRetries        int
 	RetryWaitMin      time.Duration
 	RetryWaitMax      time.Duration
+	// Logger is an optional pluggable logger. If nil, logging is disabled.
+	Logger Logger
 }
 
 type Limiter interface {
@@ -47,6 +49,7 @@ type Client struct {
 	http        *httpclient.Client
 	limiter     Limiter
 	retryPolicy RetryPolicy
+	logger      Logger
 
 	User     *user.Service
 	Faction  *faction.Service
@@ -66,6 +69,7 @@ func New(config Config) *Client {
 		http:        httpclient.New(cfg.BaseURL, cfg.HTTPClient, cfg.UserAgent),
 		limiter:     limiterFromConfig(cfg),
 		retryPolicy: retryPolicyFromConfig(cfg),
+		logger:      cfg.Logger,
 	}
 
 	c.User = user.NewService(c)

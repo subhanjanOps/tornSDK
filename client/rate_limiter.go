@@ -4,10 +4,19 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
+// RateLimiter implements a token-bucket limiter backed by golang.org/x/time/rate
+// while retaining the previous interval/next fields for limited backwards
+// compatibility with existing tests and callers that inspect those fields.
 type RateLimiter struct {
+	// interval is kept for backwards compatibility and testing convenience.
 	interval time.Duration
+
+	// limiter is the actual token-bucket limiter used for runtime throttling.
+	limiter *rate.Limiter
 
 	mu   sync.Mutex
 	next time.Time
@@ -18,39 +27,29 @@ func NewRateLimiter(requestsPerMinute int) *RateLimiter {
 		return nil
 	}
 
+	interval := time.Minute / time.Duration(requestsPerMinute)
+
+	// rate.Limiter expects events per second. Convert RPM -> RPS.
+	rps := float64(requestsPerMinute) / 60.0
+
+	// Burst set to 1 to emulate a steady rate with minimal bursting.
+	limiter := rate.NewLimiter(rate.Limit(rps), 1)
+
 	return &RateLimiter{
-		interval: time.Minute / time.Duration(requestsPerMinute),
+		interval: interval,
+		limiter:  limiter,
 	}
 }
 
 func (r *RateLimiter) Wait(ctx context.Context) error {
-	if r == nil || r.interval <= 0 {
+	if r == nil {
 		return nil
 	}
 
-	r.mu.Lock()
-	scheduled := r.next
-	now := time.Now()
-
-	if scheduled.IsZero() || scheduled.Before(now) {
-		scheduled = now
-	}
-
-	r.next = scheduled.Add(r.interval)
-	r.mu.Unlock()
-
-	delay := time.Until(scheduled)
-	if delay <= 0 {
+	// If no underlying limiter is configured, fall back to no-op behavior.
+	if r.limiter == nil {
 		return nil
 	}
 
-	timer := time.NewTimer(delay)
-	defer timer.Stop()
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-timer.C:
-		return nil
-	}
+	return r.limiter.Wait(ctx)
 }

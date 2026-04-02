@@ -263,3 +263,107 @@ func TestDecodeResponse(t *testing.T) {
 		}
 	})
 }
+
+// Net temporary error implementation for tests
+type tempNetErr struct{}
+
+func (tempNetErr) Error() string   { return "temporary network" }
+func (tempNetErr) Timeout() bool   { return false }
+func (tempNetErr) Temporary() bool { return true }
+
+func TestClientDoRetriesOnAPITemporaryError(t *testing.T) {
+	attempts := 0
+	httpClient := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			attempts++
+
+			if attempts == 1 {
+				// API returns 200 with error envelope indicating a temporary error code
+				return newHTTPResponse(http.StatusOK, "200 OK", `{"error":{"code":5,"error":"Too many requests"}}`), nil
+			}
+
+			return newHTTPResponse(http.StatusOK, "200 OK", `{"ok":true}`), nil
+		}),
+	}
+
+	client := &Client{
+		apiKey:      "secret",
+		http:        httpclient.New("https://example.com", httpClient, ""),
+		retryPolicy: NewRetryPolicy(1, time.Millisecond, time.Millisecond),
+	}
+
+	var out struct {
+		OK bool `json:"ok"`
+	}
+	if err := client.Do(context.Background(), NewRequest(http.MethodGet, "user/bars"), &out); err != nil {
+		t.Fatalf("Do returned error: %v", err)
+	}
+
+	if !out.OK {
+		t.Fatal("expected decoded success response")
+	}
+
+	if got, want := attempts, 2; got != want {
+		t.Fatalf("unexpected attempts: got %d want %d", got, want)
+	}
+}
+
+func TestClientDoRetriesOnNetworkTemporaryError(t *testing.T) {
+	attempts := 0
+	httpClient := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			attempts++
+			if attempts == 1 {
+				return nil, tempNetErr{}
+			}
+			return newHTTPResponse(http.StatusOK, "200 OK", `{"ok":true}`), nil
+		}),
+	}
+
+	client := &Client{
+		apiKey:      "secret",
+		http:        httpclient.New("https://example.com", httpClient, ""),
+		retryPolicy: NewRetryPolicy(1, time.Millisecond, time.Millisecond),
+	}
+
+	var out struct {
+		OK bool `json:"ok"`
+	}
+	if err := client.Do(context.Background(), NewRequest(http.MethodGet, "user/bars"), &out); err != nil {
+		t.Fatalf("Do returned error: %v", err)
+	}
+
+	if !out.OK {
+		t.Fatal("expected decoded success response")
+	}
+
+	if got, want := attempts, 2; got != want {
+		t.Fatalf("unexpected attempts: got %d want %d", got, want)
+	}
+}
+
+func TestClientDoStopsOnNonTemporaryAPIError(t *testing.T) {
+	attempts := 0
+	httpClient := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			attempts++
+			// API returns error code that is not marked temporary
+			return newHTTPResponse(http.StatusOK, "200 OK", `{"error":{"code":1,"error":"Not allowed"}}`), nil
+		}),
+	}
+
+	client := &Client{
+		apiKey:      "secret",
+		http:        httpclient.New("https://example.com", httpClient, ""),
+		retryPolicy: NewRetryPolicy(3, time.Millisecond, time.Millisecond),
+	}
+
+	err := client.Do(context.Background(), NewRequest(http.MethodGet, "user/bars"), nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	if got, want := attempts, 1; got != want {
+		t.Fatalf("unexpected attempts: got %d want %d", got, want)
+	}
+}

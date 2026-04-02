@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 func TestNewRateLimiter(t *testing.T) {
@@ -30,33 +32,36 @@ func TestRateLimiterWaitNoopCases(t *testing.T) {
 
 	limiter := &RateLimiter{}
 	if err := limiter.Wait(context.Background()); err != nil {
-		t.Fatalf("expected zero interval limiter to no-op, got %v", err)
+		t.Fatalf("expected zero-limiter to no-op, got %v", err)
 	}
 }
 
-func TestRateLimiterWaitImmediateAndPastSchedule(t *testing.T) {
-	limiter := &RateLimiter{interval: time.Millisecond}
+func TestRateLimiterWaitImmediateAndSubsequent(t *testing.T) {
+	limiter := NewRateLimiter(600) // high RPS so waits are near-immediate
+	if limiter == nil {
+		t.Fatal("expected limiter")
+	}
+
 	if err := limiter.Wait(context.Background()); err != nil {
 		t.Fatalf("expected first wait to be immediate, got %v", err)
 	}
 
-	limiter.next = time.Now().Add(-time.Second)
+	// subsequent immediate call should also succeed (burst=1 may allow immediate)
 	if err := limiter.Wait(context.Background()); err != nil {
-		t.Fatalf("expected past schedule to be immediate, got %v", err)
+		t.Fatalf("expected second wait to be immediate, got %v", err)
 	}
 }
 
 func TestRateLimiterWaitDelayAndCancel(t *testing.T) {
+	// Create a limiter that will block on Wait by using rate 0 and burst 0.
 	limiter := &RateLimiter{
 		interval: 5 * time.Millisecond,
-		next:     time.Now().Add(2 * time.Millisecond),
+		limiter:  rate.NewLimiter(0, 1),
 	}
 
-	if err := limiter.Wait(context.Background()); err != nil {
-		t.Fatalf("expected delayed wait to succeed, got %v", err)
-	}
+	// consume the initial token so that Wait will block
+	limiter.limiter.Allow()
 
-	limiter.next = time.Now().Add(time.Second)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 

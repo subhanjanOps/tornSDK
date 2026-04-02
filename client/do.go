@@ -31,6 +31,10 @@ func (c *Client) Do(ctx context.Context, req *Request, v interface{}) error {
 			}
 		}
 
+		if c.logger != nil {
+			c.logger.Debugf("http request attempt=%d path=%s", attempt, prepared.Path)
+		}
+
 		httpReq, err := c.http.BuildRequest(ctx, prepared)
 		if err != nil {
 			return err
@@ -47,6 +51,10 @@ func (c *Client) Do(ctx context.Context, req *Request, v interface{}) error {
 		wait, shouldRetry := c.retryPolicy.NextBackoff(attempt, resp, err)
 		if !shouldRetry {
 			return err
+		}
+
+		if c.logger != nil {
+			c.logger.Infof("retrying attempt=%d wait=%s err=%v", attempt, wait, err)
 		}
 
 		if err := sleepContext(ctx, wait); err != nil {
