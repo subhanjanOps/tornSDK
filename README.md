@@ -233,3 +233,17 @@ This SDK focuses on transport and endpoint access. It does not try to provide:
 - custom business rules on top of Torn data
 
 That separation is intentional so the SDK stays predictable and easy to compose.
+
+## Maintainers
+
+- [Subhanjan Adhikary](https://github.com/subhanjanOps) — creator and primary maintainer
+
+## Contributors
+
+Thanks to everyone who has contributed to this project!
+
+<a href="https://github.com/subhanjanOps/tornSDK/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=subhanjanOps/tornSDK" />
+</a>
+
+Contributions are welcome! Please open an issue or submit a pull request.
