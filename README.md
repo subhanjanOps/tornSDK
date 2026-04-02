@@ -243,7 +243,7 @@ That separation is intentional so the SDK stays predictable and easy to compose.
 Thanks to everyone who has contributed to this project!
 
 <a href="https://github.com/subhanjanOps/tornSDK/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=subhanjanOps/tornSDK" />
+  <img src="https://contrib.rocks/image?repo=subhanjanOps/tornSDK" alt="Project contributors" />
 </a>
 
 Contributions are welcome! Please open an issue or submit a pull request.
