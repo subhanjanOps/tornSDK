@@ -1,0 +1,15 @@
+linters-settings:
+  govet:
+    disable:
+      - composites
+
+linters:
+  enable:
+    - govet
+    - errcheck
+    - staticcheck
+    - unused
+    - ineffassign
+    - typecheck
+  disable:
+    - depguard
