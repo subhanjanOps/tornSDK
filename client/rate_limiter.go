@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -17,9 +16,6 @@ type RateLimiter struct {
 
 	// limiter is the actual token-bucket limiter used for runtime throttling.
 	limiter *rate.Limiter
-
-	mu   sync.Mutex
-	next time.Time
 }
 
 func NewRateLimiter(requestsPerMinute int) *RateLimiter {
